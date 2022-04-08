@@ -589,6 +589,18 @@ public class WorkflowManagementServiceImpl implements WorkflowManagementService 
     }
 
     @Override
+    public int getCountOfAllAssociations(int tenantId) throws WorkflowException {
+
+        return associationDAO.getCountOfAllAssociations(tenantId);
+    }
+
+    @Override
+    public int getCountOfAssociations(int tenantId, String filter) throws WorkflowException{
+
+        return associationDAO.getCountOfAssociations(tenantId, filter);
+    }
+
+    @Override
     public void changeAssociationState(String associationId, boolean isEnable) throws WorkflowException {
 
         List<WorkflowListener> workflowListenerList =

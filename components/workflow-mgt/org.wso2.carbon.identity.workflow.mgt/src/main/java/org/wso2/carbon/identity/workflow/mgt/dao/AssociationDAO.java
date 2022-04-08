@@ -149,6 +149,71 @@ public class AssociationDAO {
         return associations;
     }
 
+    /**
+     *
+     * @param tenantId
+     * @return
+     * @throws InternalWorkflowException
+     */
+
+    public int getCountOfAllAssociations(int tenantId) throws InternalWorkflowException{
+        //int tenantID = CarbonContext.getThreadLocalCarbonContext().getTenantId();
+        int count;
+
+        Connection connection = IdentityDatabaseUtil.getDBConnection(false);
+        PreparedStatement prepStmt = null;
+        ResultSet resultSet = null;
+
+        try {
+            prepStmt = connection
+                    .prepareStatement(SQLConstants.GET_ALL_ASSOCIATIONS_COUNT_BY_TENANT_QUERY);
+            prepStmt.setInt(1, tenantId);
+            resultSet = prepStmt.executeQuery();
+            resultSet.next();
+            count = Integer.parseInt(resultSet.getString(1));
+        } catch (SQLException e) {
+            throw new InternalWorkflowException(
+                    "Error while getting the count of all Association for the tenantID: " + tenantId, e);
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
+        }
+
+        return count;
+    }
+
+    /**
+     *
+     * @param tenantId
+     * @param filter
+     * @return
+     * @throws InternalWorkflowException
+     */
+
+    public int getCountOfAssociations(int tenantId, String filter) throws InternalWorkflowException{
+        //int tenantID = CarbonContext.getThreadLocalCarbonContext().getTenantId();
+        int count;
+
+        Connection connection = IdentityDatabaseUtil.getDBConnection(false);
+        PreparedStatement prepStmt = null;
+        ResultSet resultSet = null;
+
+        try {
+            prepStmt = connection
+                    .prepareStatement(SQLConstants.GET_ASSOCIATIONS_COUNT_BY_TENANT_QUERY);
+            prepStmt.setInt(1, tenantId);
+            prepStmt.setString(2, filter+"%");
+            resultSet = prepStmt.executeQuery();
+            resultSet.next();
+            count = Integer.parseInt(resultSet.getString(1));
+        } catch (SQLException e) {
+            throw new InternalWorkflowException(
+                    "Error while getting the count of Association for the tenantID: " + tenantId, e);
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
+        }
+
+        return count;
+    }
 
     /**
      *

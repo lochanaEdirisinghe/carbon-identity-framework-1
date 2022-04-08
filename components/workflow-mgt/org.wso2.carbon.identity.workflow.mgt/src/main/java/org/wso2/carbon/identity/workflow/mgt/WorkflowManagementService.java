@@ -179,6 +179,25 @@ public interface WorkflowManagementService {
     List<Association> listAllAssociations(int tenantId) throws WorkflowException;
 
     /**
+     * List parameters of a workflow
+     *
+     * @param tenantId  Tenant ID
+     * @return
+     * @throws WorkflowException
+     */
+    int getCountOfAllAssociations(int tenantId) throws WorkflowException;
+
+    /**
+     * List parameters of a workflow
+     *
+     * @param tenantId  Tenant ID
+     * @param filter  filter
+     * @return
+     * @throws WorkflowException
+     */
+    int getCountOfAssociations(int tenantId, String filter) throws WorkflowException;
+
+    /**
      * Enable or disable association
      *
      * @param associationId  Association ID
