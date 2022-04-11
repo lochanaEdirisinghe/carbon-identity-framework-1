@@ -447,6 +447,18 @@ public class WorkflowManagementServiceImpl implements WorkflowManagementService 
     }
 
     @Override
+    public int getCountOfAllWorkflows(int tenantId) throws WorkflowException{
+
+        return getCountOfWorkflows(tenantId, "*");
+    }
+
+    @Override
+    public int getCountOfWorkflows(int tenantId, String filter) throws WorkflowException{
+
+        return workflowDAO.getCountOfWorkflows(tenantId, filter);
+    }
+
+    @Override
     public void removeWorkflow(String workflowId) throws WorkflowException {
         Workflow workflow = workflowDAO.getWorkflow(workflowId);
         //Deleting the role that is created for per workflow
@@ -591,7 +603,7 @@ public class WorkflowManagementServiceImpl implements WorkflowManagementService 
     @Override
     public int getCountOfAllAssociations(int tenantId) throws WorkflowException {
 
-        return associationDAO.getCountOfAllAssociations(tenantId);
+        return getCountOfAssociations(tenantId, "*");
     }
 
     @Override

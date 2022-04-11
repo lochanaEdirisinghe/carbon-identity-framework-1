@@ -135,6 +135,24 @@ public interface WorkflowManagementService {
     List<Workflow> listWorkflows(int tenantId) throws WorkflowException;
 
     /**
+     * Get count of all Workflows
+     *
+     * @param tenantId  Tenant ID
+     * @return
+     * @throws WorkflowException
+     */
+    int getCountOfAllWorkflows(int tenantId) throws WorkflowException;
+
+    /**
+     * Get count of Workflows
+     *
+     * @param tenantId  Tenant ID
+     * @param filter  filter
+     * @return
+     * @throws WorkflowException
+     */
+    int getCountOfWorkflows(int tenantId, String filter) throws WorkflowException;
+    /**
      * Remove a workflow
      *
      * @param id  ID of workflow to remove
@@ -145,12 +163,12 @@ public interface WorkflowManagementService {
     /**
      * Remove all workflows by tenant id.
      *
-     * @param tenantId  Id of the tenant
-     * @throws WorkflowException
+     * @param tenantId The id of the tenant.
+     * @throws WorkflowException throws when an error occurs in removing workflows.
      */
     default void removeWorkflows(int tenantId) throws WorkflowException {
 
-    };
+    }
 
     /**
      * Remove association
@@ -179,7 +197,7 @@ public interface WorkflowManagementService {
     List<Association> listAllAssociations(int tenantId) throws WorkflowException;
 
     /**
-     * List parameters of a workflow
+     * Get count of all associations
      *
      * @param tenantId  Tenant ID
      * @return
@@ -188,7 +206,7 @@ public interface WorkflowManagementService {
     int getCountOfAllAssociations(int tenantId) throws WorkflowException;
 
     /**
-     * List parameters of a workflow
+     * Get count of associations
      *
      * @param tenantId  Tenant ID
      * @param filter  filter
@@ -268,12 +286,20 @@ public interface WorkflowManagementService {
     WorkflowRequestAssociation[] getWorkflowsOfRequest(String requestId) throws WorkflowException;
 
     /**
-     * Update state of a existing workflow request
+     * Move workflow requests created by the logged in user to DELETED state.
      *
-     * @param requestId
+     * @param requestId Request ID
      * @throws WorkflowException
      */
     void deleteWorkflowRequest(String requestId) throws WorkflowException;
+
+    /**
+     * Move workflow requests created by any user to DELETED state.
+     *
+     * @param requestId Request ID
+     * @throws WorkflowException
+     */
+    default void deleteWorkflowRequestCreatedByAnyUser(String requestId) throws WorkflowException { }
 
     WorkflowRequest[] getRequestsFromFilter(String user, String beginDate, String endDate, String
             dateCategory, int tenantId, String status) throws WorkflowException;

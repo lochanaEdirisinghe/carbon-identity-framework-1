@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.workflow.mgt.dao;
 
+import org.apache.commons.lang.StringUtils;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.workflow.mgt.dto.Association;
 import org.wso2.carbon.identity.workflow.mgt.exception.InternalWorkflowException;
@@ -149,36 +150,17 @@ public class AssociationDAO {
         return associations;
     }
 
-    /**
-     *
-     * @param tenantId
-     * @return
-     * @throws InternalWorkflowException
-     */
+    private String resolveSQLFilter(String filter) {
 
-    public int getCountOfAllAssociations(int tenantId) throws InternalWorkflowException{
-        //int tenantID = CarbonContext.getThreadLocalCarbonContext().getTenantId();
-        int count;
-
-        Connection connection = IdentityDatabaseUtil.getDBConnection(false);
-        PreparedStatement prepStmt = null;
-        ResultSet resultSet = null;
-
-        try {
-            prepStmt = connection
-                    .prepareStatement(SQLConstants.GET_ALL_ASSOCIATIONS_COUNT_BY_TENANT_QUERY);
-            prepStmt.setInt(1, tenantId);
-            resultSet = prepStmt.executeQuery();
-            resultSet.next();
-            count = Integer.parseInt(resultSet.getString(1));
-        } catch (SQLException e) {
-            throw new InternalWorkflowException(
-                    "Error while getting the count of all Association for the tenantID: " + tenantId, e);
-        } finally {
-            IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
+        //To avoid any issues when the filter string is blank or null, assigning "%" to SQLFilter.
+        String sqlfilter = "%";
+        if (StringUtils.isNotBlank(filter)) {
+            sqlfilter = filter.trim()
+                    .replace("*", "%")
+                    .replace("?", "_");
         }
 
-        return count;
+        return sqlfilter;
     }
 
     /**
@@ -190,7 +172,7 @@ public class AssociationDAO {
      */
 
     public int getCountOfAssociations(int tenantId, String filter) throws InternalWorkflowException{
-        //int tenantID = CarbonContext.getThreadLocalCarbonContext().getTenantId();
+
         int count;
 
         Connection connection = IdentityDatabaseUtil.getDBConnection(false);
@@ -198,10 +180,11 @@ public class AssociationDAO {
         ResultSet resultSet = null;
 
         try {
+            String filterResolvedForSQL = resolveSQLFilter(filter);
             prepStmt = connection
-                    .prepareStatement(SQLConstants.GET_ASSOCIATIONS_COUNT_BY_TENANT_QUERY);
+                    .prepareStatement(SQLConstants.GET_ASSOCIATIONS_COUNT_QUERY);
             prepStmt.setInt(1, tenantId);
-            prepStmt.setString(2, filter+"%");
+            prepStmt.setString(2, filterResolvedForSQL);
             resultSet = prepStmt.executeQuery();
             resultSet.next();
             count = Integer.parseInt(resultSet.getString(1));
