@@ -34,6 +34,9 @@ public class WFConstant {
     public static final String KEYSTORE_PASSWORD_CARBON_CONFIG_PATH = "Security.KeyStore.Password";
 
 
+    public static final String ITEMS_PER_PAGE_PROPERTY = "ItemsPerPage";
+    public static final int DEFAULT_RESULTS_PER_PAGE = 15;
+
     public static final Set<Class> NUMERIC_CLASSES;
 
     static {
