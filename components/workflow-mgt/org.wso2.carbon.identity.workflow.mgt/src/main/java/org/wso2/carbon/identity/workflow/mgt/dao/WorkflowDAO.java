@@ -290,7 +290,6 @@ public class WorkflowDAO {
      *
      * @Deprecated Use {@link #listPaginatedWorkflows(int, String, int, int)}
      * @param tenantId Tenant ID
-     * @param filter Filter
      * @return List<Workflow>
      * @throws InternalWorkflowException
      */
