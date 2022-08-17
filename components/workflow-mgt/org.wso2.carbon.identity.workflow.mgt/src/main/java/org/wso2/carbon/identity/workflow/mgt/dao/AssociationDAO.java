@@ -18,7 +18,10 @@
 
 package org.wso2.carbon.identity.workflow.mgt.dao;
 
+import org.apache.axis2.AxisFault;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.workflow.mgt.dto.Association;
 import org.wso2.carbon.identity.workflow.mgt.exception.InternalWorkflowException;
@@ -39,6 +42,8 @@ import java.util.List;
 public class AssociationDAO {
 
     private final String errorMessage = "Error when executing the SQL query ";
+    private static final Log log = LogFactory.getLog(WorkflowDAO.class);
+    boolean debugEnabled = log.isErrorEnabled();
 
     /**
      *
@@ -149,7 +154,7 @@ public class AssociationDAO {
                 }
             }
         } catch (SQLException e) {
-            throw new InternalWorkflowException(errorMessage, e);
+            handleException(WFConstant.Exceptions.SQL_ERROR_LISTING_ASSOCIATIONS, e);
         }
         return associations;
     }
@@ -200,19 +205,6 @@ public class AssociationDAO {
         return associations;
     }
 
-    private String resolveSQLFilter(String filter) {
-
-        //To avoid any issues when the filter string is blank or null, assigning "%" to SQLFilter.
-        String sqlFilter = "%";
-        if (StringUtils.isNotBlank(filter)) {
-            sqlFilter = filter.trim()
-                    .replace("*", "%")
-                    .replace("?", "_");
-        }
-
-        return sqlFilter;
-    }
-
     /**
      *
      * @param tenantId
@@ -238,8 +230,7 @@ public class AssociationDAO {
                 count = resultSet.getInt(1);
             }
         } catch (SQLException e) {
-            throw new InternalWorkflowException(
-                    "Error while getting the count of Association for the tenantID: " + tenantId, e);
+            handleException(WFConstant.Exceptions.SQL_ERROR_GETTING_ASSOC_COUNT, e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
         }
@@ -318,28 +309,6 @@ public class AssociationDAO {
         }
     }
 
-    private static String getSqlQuery(String databaseProductName) throws InternalWorkflowException {
-        String sqlQuery;
-        if (databaseProductName.contains("MySQL")
-                || databaseProductName.contains("MariaDB")
-                || databaseProductName.contains("H2")) {
-            sqlQuery = SQLConstants.GET_ASSOCIATIONS_BY_TENANT_AND_ASSOC_NAME_MYSQL;
-        } else if (databaseProductName.contains("Oracle")) {
-            sqlQuery = SQLConstants.GET_ASSOCIATIONS_BY_TENANT_AND_ASSOC_NAME_ORACLE;
-        } else if (databaseProductName.contains("Microsoft")) {
-            sqlQuery = SQLConstants.GET_ASSOCIATIONS_BY_TENANT_AND_ASSOC_NAME_MSSQL;
-        } else if (databaseProductName.contains("PostgreSQL")) {
-            sqlQuery = SQLConstants.GET_ASSOCIATIONS_BY_TENANT_AND_ASSOC_NAME_POSTGRESQL;
-        } else if (databaseProductName.contains("DB2")) {
-            sqlQuery = SQLConstants.GET_ASSOCIATIONS_BY_TENANT_AND_ASSOC_NAME_DB2SQL;
-        } else if (databaseProductName.contains("INFORMIX")) {
-            sqlQuery = SQLConstants.GET_ASSOCIATIONS_BY_TENANT_AND_ASSOC_NAME_INFORMIX;
-        } else {
-            throw new InternalWorkflowException(WFConstant.Exceptions.ERROR_WHILE_LOADING_ASSOCIATIONS);
-        }
-        return sqlQuery;
-    }
-
     /**
      *
      * @param workflowId
@@ -381,6 +350,33 @@ public class AssociationDAO {
     }
 
     /**
+     *
+     * @param databaseProductName Database Product Name
+     * @throws InternalWorkflowException
+     */
+    private static String getSqlQuery(String databaseProductName) throws InternalWorkflowException {
+        String sqlQuery;
+        if (databaseProductName.contains("MySQL")
+                || databaseProductName.contains("MariaDB")
+                || databaseProductName.contains("H2")) {
+            sqlQuery = SQLConstants.GET_ASSOCIATIONS_BY_TENANT_AND_ASSOC_NAME_MYSQL;
+        } else if (databaseProductName.contains("Oracle")) {
+            sqlQuery = SQLConstants.GET_ASSOCIATIONS_BY_TENANT_AND_ASSOC_NAME_ORACLE;
+        } else if (databaseProductName.contains("Microsoft")) {
+            sqlQuery = SQLConstants.GET_ASSOCIATIONS_BY_TENANT_AND_ASSOC_NAME_MSSQL;
+        } else if (databaseProductName.contains("PostgreSQL")) {
+            sqlQuery = SQLConstants.GET_ASSOCIATIONS_BY_TENANT_AND_ASSOC_NAME_POSTGRESQL;
+        } else if (databaseProductName.contains("DB2")) {
+            sqlQuery = SQLConstants.GET_ASSOCIATIONS_BY_TENANT_AND_ASSOC_NAME_DB2SQL;
+        } else if (databaseProductName.contains("INFORMIX")) {
+            sqlQuery = SQLConstants.GET_ASSOCIATIONS_BY_TENANT_AND_ASSOC_NAME_INFORMIX;
+        } else {
+            throw new InternalWorkflowException(WFConstant.Exceptions.ERROR_WHILE_LOADING_ASSOCIATIONS);
+        }
+        return sqlQuery;
+    }
+
+    /**
      * Create PreparedStatement
      *
      * @param DBProductName db product name
@@ -411,4 +407,38 @@ public class AssociationDAO {
         }
         return prepStmt;
     }
+
+    /**
+     *
+     * @param filter
+     * @return
+     * @throws InternalWorkflowException
+     */
+    private String resolveSQLFilter(String filter) {
+
+        //To avoid any issues when the filter string is blank or null, assigning "%" to SQLFilter.
+        String sqlFilter = "%";
+        if (StringUtils.isNotBlank(filter)) {
+            sqlFilter = filter.trim()
+                    .replace("*", "%")
+                    .replace("?", "_");
+        }
+        return sqlFilter;
+    }
+
+    /**
+     * Logs and wraps the given exception.
+     *
+     * @param errorMsg Error message
+     * @param e   Exception
+     * @throws InternalWorkflowException
+     */
+    private void handleException(String errorMsg, Exception e) throws InternalWorkflowException {
+
+        if (debugEnabled) {
+            log.debug(errorMsg, e);
+        }
+        throw new InternalWorkflowException(errorMsg, e);
+    }
+
 }

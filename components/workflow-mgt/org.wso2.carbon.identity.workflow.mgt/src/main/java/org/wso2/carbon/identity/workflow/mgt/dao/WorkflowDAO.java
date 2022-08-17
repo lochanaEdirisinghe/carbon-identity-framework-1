@@ -19,6 +19,8 @@
 package org.wso2.carbon.identity.workflow.mgt.dao;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.workflow.mgt.bean.Parameter;
 import org.wso2.carbon.identity.workflow.mgt.bean.Workflow;
@@ -40,6 +42,8 @@ import java.util.List;
 public class WorkflowDAO {
 
     private final String errorMessage = "Error when executing the SQL query ";
+    private static final Log log = LogFactory.getLog(WorkflowDAO.class);
+    boolean debugEnabled = log.isErrorEnabled();
 
     /**
      * Adding a workflow
@@ -225,64 +229,9 @@ public class WorkflowDAO {
                 }
             }
         } catch (SQLException e) {
-            throw new InternalWorkflowException(errorMessage, e);
+            handleException(WFConstant.Exceptions.SQL_ERROR_LISTING_WORKFLOWS, e);
         }
         return workflowList;
-    }
-
-    private String getSqlQuery(String databaseProductName) throws InternalWorkflowException {
-
-        String sqlQuery;
-        if (databaseProductName.contains(WFConstant.DBProductNames.MYSQL)
-                || databaseProductName.contains(WFConstant.DBProductNames.MARIADB)
-                || databaseProductName.contains(WFConstant.DBProductNames.H2)) {
-            sqlQuery = SQLConstants.GET_WORKFLOWS_BY_TENANT_AND_WF_NAME_MYSQL;
-        } else if (databaseProductName.contains(WFConstant.DBProductNames.ORACLE)) {
-            sqlQuery = SQLConstants.GET_WORKFLOWS_BY_TENANT_AND_WF_NAME_ORACLE;
-        } else if (databaseProductName.contains(WFConstant.DBProductNames.MICROSOFT)) {
-            sqlQuery = SQLConstants.GET_WORKFLOWS_BY_TENANT_AND_WF_NAME_MSSQL;
-        } else if (databaseProductName.contains(WFConstant.DBProductNames.POSTGRESQL)) {
-            sqlQuery = SQLConstants.GET_WORKFLOWS_BY_TENANT_AND_WF_NAME_POSTGRESQL;
-        } else if (databaseProductName.contains(WFConstant.DBProductNames.DB2)) {
-            sqlQuery = SQLConstants.GET_WORKFLOWS_BY_TENANT_AND_WF_NAME_DB2SQL;
-        } else if (databaseProductName.contains(WFConstant.DBProductNames.INFORMIX)) {
-            sqlQuery = SQLConstants.GET_WORKFLOWS_BY_TENANT_AND_WF_NAME_INFORMIX;
-        } else {
-            throw new InternalWorkflowException(WFConstant.Exceptions.ERROR_WHILE_LOADING_WORKFLOWS);
-        }
-        return sqlQuery;
-    }
-
-    /**
-     * Create PreparedStatement
-     *
-     * @param DBProductName db product name
-     * @param connection db connection
-     * @param sqlQuery SQL query
-     * @param tenantId Tenant ID
-     * @param filterResolvedForSQL resolved filter for sql
-     * @param offset offset
-     * @param limit limit
-     * @return PreparedStatement
-     * @throws SQLException
-     */
-    private PreparedStatement generatePrepStmt(String DBProductName, Connection connection, String sqlQuery, int tenantId, String filterResolvedForSQL, int offset, int limit) throws SQLException {
-
-        PreparedStatement prepStmt = null;
-        if (DBProductName.equals(WFConstant.DBProductNames.POSTGRESQL)){
-            prepStmt = connection.prepareStatement(sqlQuery);
-            prepStmt.setInt(1, tenantId);
-            prepStmt.setString(2, filterResolvedForSQL);
-            prepStmt.setInt(3, limit);
-            prepStmt.setInt(4, offset);
-        } else {
-            prepStmt = connection.prepareStatement(sqlQuery);
-            prepStmt.setInt(1, tenantId);
-            prepStmt.setString(2, filterResolvedForSQL);
-            prepStmt.setInt(3, offset);
-            prepStmt.setInt(4, limit);
-        }
-        return prepStmt;
     }
 
     /**
@@ -326,25 +275,6 @@ public class WorkflowDAO {
     }
 
     /**
-     * Resolve SQL Filter
-     *
-     * @param filter
-     * @return
-     * @throws InternalWorkflowException
-     */
-    private String resolveSQLFilter(String filter) {
-
-        //To avoid any issues when the filter string is blank or null, assigning "%" to SQLFilter.
-        String sqlFilter = "%";
-        if (StringUtils.isNotBlank(filter)) {
-            sqlFilter = filter.trim()
-                    .replace("*", "%")
-                    .replace("?", "_");
-        }
-        return sqlFilter;
-    }
-
-    /**
      * Get count of workflows with a filter
      *
      * @param tenantId
@@ -369,8 +299,7 @@ public class WorkflowDAO {
                 count = resultSet.getInt(1);
             }
         } catch (SQLException e) {
-            throw new InternalWorkflowException(
-                    "Error while getting the count of Association for the tenantID: " + tenantId, e);
+            handleException(WFConstant.Exceptions.SQL_ERROR_GETTING_WORKFLOW_COUNT, e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
         }
@@ -492,5 +421,99 @@ public class WorkflowDAO {
             IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
         }
         return parameterList;
+    }
+
+    /**
+     *
+     * @param databaseProductName Database Product Name
+     * @throws InternalWorkflowException
+     */
+    private String getSqlQuery(String databaseProductName) throws InternalWorkflowException {
+
+        String sqlQuery;
+        if (databaseProductName.contains(WFConstant.DBProductNames.MYSQL)
+                || databaseProductName.contains(WFConstant.DBProductNames.MARIADB)
+                || databaseProductName.contains(WFConstant.DBProductNames.H2)) {
+            sqlQuery = SQLConstants.GET_WORKFLOWS_BY_TENANT_AND_WF_NAME_MYSQL;
+        } else if (databaseProductName.contains(WFConstant.DBProductNames.ORACLE)) {
+            sqlQuery = SQLConstants.GET_WORKFLOWS_BY_TENANT_AND_WF_NAME_ORACLE;
+        } else if (databaseProductName.contains(WFConstant.DBProductNames.MICROSOFT)) {
+            sqlQuery = SQLConstants.GET_WORKFLOWS_BY_TENANT_AND_WF_NAME_MSSQL;
+        } else if (databaseProductName.contains(WFConstant.DBProductNames.POSTGRESQL)) {
+            sqlQuery = SQLConstants.GET_WORKFLOWS_BY_TENANT_AND_WF_NAME_POSTGRESQL;
+        } else if (databaseProductName.contains(WFConstant.DBProductNames.DB2)) {
+            sqlQuery = SQLConstants.GET_WORKFLOWS_BY_TENANT_AND_WF_NAME_DB2SQL;
+        } else if (databaseProductName.contains(WFConstant.DBProductNames.INFORMIX)) {
+            sqlQuery = SQLConstants.GET_WORKFLOWS_BY_TENANT_AND_WF_NAME_INFORMIX;
+        } else {
+            throw new InternalWorkflowException(WFConstant.Exceptions.ERROR_WHILE_LOADING_WORKFLOWS);
+        }
+        return sqlQuery;
+    }
+
+    /**
+     * Create PreparedStatement
+     *
+     * @param DBProductName db product name
+     * @param connection db connection
+     * @param sqlQuery SQL query
+     * @param tenantId Tenant ID
+     * @param filterResolvedForSQL resolved filter for sql
+     * @param offset offset
+     * @param limit limit
+     * @return PreparedStatement
+     * @throws SQLException
+     */
+    private PreparedStatement generatePrepStmt(String DBProductName, Connection connection, String sqlQuery, int tenantId, String filterResolvedForSQL, int offset, int limit) throws SQLException {
+
+        PreparedStatement prepStmt = null;
+        if (DBProductName.equals(WFConstant.DBProductNames.POSTGRESQL)){
+            prepStmt = connection.prepareStatement(sqlQuery);
+            prepStmt.setInt(1, tenantId);
+            prepStmt.setString(2, filterResolvedForSQL);
+            prepStmt.setInt(3, limit);
+            prepStmt.setInt(4, offset);
+        } else {
+            prepStmt = connection.prepareStatement(sqlQuery);
+            prepStmt.setInt(1, tenantId);
+            prepStmt.setString(2, filterResolvedForSQL);
+            prepStmt.setInt(3, offset);
+            prepStmt.setInt(4, limit);
+        }
+        return prepStmt;
+    }
+
+    /**
+     * Resolve SQL Filter
+     *
+     * @param filter
+     * @return
+     * @throws InternalWorkflowException
+     */
+    private String resolveSQLFilter(String filter) {
+
+        //To avoid any issues when the filter string is blank or null, assigning "%" to SQLFilter.
+        String sqlFilter = "%";
+        if (StringUtils.isNotBlank(filter)) {
+            sqlFilter = filter.trim()
+                    .replace("*", "%")
+                    .replace("?", "_");
+        }
+        return sqlFilter;
+    }
+
+    /**
+     * Logs and wraps the given exception.
+     *
+     * @param errorMsg Error message
+     * @param e   Exception
+     * @throws InternalWorkflowException
+     */
+    private void handleException(String errorMsg, Exception e) throws InternalWorkflowException {
+
+        if (debugEnabled) {
+            log.debug(errorMsg, e);
+        }
+        throw new InternalWorkflowException(errorMsg, e);
     }
 }
