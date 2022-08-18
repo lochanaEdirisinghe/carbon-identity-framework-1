@@ -272,7 +272,7 @@ function idpMgtCancel(){
             CARBON.showWarningDialog("Resident IdP Entity ID cannot be empty");
             return false;
         }
-        var isSessionTimeoutValidated = doValidateInput(document.getElementById('sessionIdleTimeout'), "Resident IdP Idle Session Timeout must be numeric value greater than 0");
+        var isSessionTimeoutValidated = doValidateInput(document.getElementById('sessionIdleTimeout'), "Resident IdP Idle Session Timeout must be numeric value greater than 0 and cannot be empty");
         if (!isSessionTimeoutValidated) {
             return false;
         }
@@ -999,7 +999,10 @@ function removeDefaultAuthSeq() {
                                 name=property__<%=Encode.forHtmlAttribute(connectorProperties[k].getName())%>
                                 id=<%=Encode.forHtmlAttribute(connectorProperties[k].getName())%>
                                         style="width:400px"
-                                value="<%=Encode.forHtmlAttribute(value)%>"/>
+                                value="<%=Encode.forHtmlAttribute(value)%>"
+                                <% if("SelfRegistration.AutoLogin.AliasName".equals(connectorProperties[k].getName()) ||
+                                    "EmailVerification.AskPassword".equals(connectorProperties[k].getName())){ %>
+                                    autocomplete="off" <% } %>/>
                             <%
                                 if (StringUtils.isNotBlank(connectorProperties[k].getDescription())) {%>
                             <div class="sectionHelp">

@@ -25,13 +25,21 @@ import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.wso2.carbon.database.utils.jdbc.JdbcTemplate;
+import org.wso2.carbon.database.utils.jdbc.exceptions.DataAccessException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.DuplicatedAuthUserException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserSessionException;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
+import org.wso2.carbon.identity.core.util.JdbcUtils;
 
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import javax.sql.DataSource;
 
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.powermock.api.mockito.PowerMockito.doNothing;
@@ -42,7 +50,10 @@ import static org.powermock.api.mockito.PowerMockito.when;
 /**
  * Test class that includes unit tests of UserSessionStore
  */
-@PrepareForTest({IdentityDatabaseUtil.class})
+@PrepareForTest({
+        IdentityDatabaseUtil.class,
+        org.wso2.carbon.identity.core.util.JdbcUtils.class
+})
 @PowerMockIgnore({"javax.xml.*"})
 public class UserSessionStoreTest extends DataStoreBaseTest {
 
@@ -112,53 +123,74 @@ public class UserSessionStoreTest extends DataStoreBaseTest {
         };
     }
 
+    @DataProvider
+    public Object[][] getSessionAppsData() {
+
+        return new Object[][]{
+                {"00000001", "testuser1", 1, "authtype"},
+        };
+    }
+
+    @DataProvider
+    public Object[][] getSessionMetadata() {
+
+        return new Object[][]{
+                {"00000001", Stream.of(new String[][]{
+                        {"IP", "localhost"},
+                        {"Last Access Time", "someTime"},
+                        {"Login Time", "someTime"},
+                        {"User Agent", "someUserAgent"},
+                }).collect(Collectors.toMap(data -> data[0], data -> data[1]))},
+        };
+    }
+
     @Test(dataProvider = "getValidUsers")
-    public void testStoreUserData(String userId, String username, int tenantId, String userDomain, int IdpId) throws
+    public void testStoreUserData(String userId, String username, int tenantId, String userDomain, int idpId) throws
             Exception {
 
         try (Connection connection = getConnection(DB_NAME)) {
-            mockIdentityDataBaseUtilConnection(connection,true);
-            UserSessionStore.getInstance().storeUserData(userId, username, tenantId, userDomain, IdpId);
+            mockIdentityDataBaseUtilConnection(connection, true);
+            UserSessionStore.getInstance().storeUserData(userId, username, tenantId, userDomain, idpId);
         }
     }
 
     @Test(dataProvider = "getUsersWithDuplicatedId", dependsOnMethods = {"testStoreUserData"}, expectedExceptions =
             UserSessionException.class)
     public void testExceptionAtStoreUserDataForDuplicatedUserID(String userId, String username, int tenantId, String
-            userDomain, int IdpId) throws Exception {
+            userDomain, int idpId) throws Exception {
 
         try (Connection connection = getConnection(DB_NAME)) {
             mockIdentityDataBaseUtilConnection(connection, true);
-            UserSessionStore.getInstance().storeUserData(userId, username, tenantId, userDomain, IdpId);
+            UserSessionStore.getInstance().storeUserData(userId, username, tenantId, userDomain, idpId);
         }
     }
 
     @Test(dataProvider = "getDuplicatedUsers", dependsOnMethods = {"testStoreUserData"}, expectedExceptions =
             DuplicatedAuthUserException.class)
     public void testExceptionAtStoreUserDataForInvalidUser(String userId, String username, int tenantId, String
-            userDomain, int IdpId) throws Exception {
+            userDomain, int idpId) throws Exception {
 
         try (Connection connection = getConnection(DB_NAME)) {
-            mockIdentityDataBaseUtilConnection(connection,true);
-            UserSessionStore.getInstance().storeUserData(userId, username, tenantId, userDomain, IdpId);
+            mockIdentityDataBaseUtilConnection(connection, true);
+            UserSessionStore.getInstance().storeUserData(userId, username, tenantId, userDomain, idpId);
         }
     }
 
     @Test(dataProvider = "getValidUsers", dependsOnMethods = {"testStoreUserData"})
     public void testGetUserIdForAllUserParams(String expectedUserId, String username, int tenantId, String userDomain,
-                                              int IdpId) throws Exception {
+                                              int idpId) throws Exception {
 
         try (Connection connection = getConnection(DB_NAME)) {
             mockIdentityDataBaseUtilConnection(connection, false);
-            String actualUserId = UserSessionStore.getInstance().getUserId(username, tenantId, userDomain, IdpId);
+            String actualUserId = UserSessionStore.getInstance().getUserId(username, tenantId, userDomain, idpId);
             Assert.assertEquals(actualUserId, expectedUserId, "Expected userId not received for user: " + username +
-                    " of userstore domain: " + userDomain + ", tenant: " + tenantId + " and idp id: " + IdpId);
+                    " of userstore domain: " + userDomain + ", tenant: " + tenantId + " and idp id: " + idpId);
         }
     }
 
     @Test(dataProvider = "getValidUsers", dependsOnMethods = {"testStoreUserData"})
     public void testGetUserIdWithoutIdPParam(String expectedUserId, String username, int tenantId, String userDomain,
-                                             int IdpId) throws Exception {
+                                             int idpId) throws Exception {
 
         try (Connection connection = getConnection(DB_NAME)) {
             mockIdentityDataBaseUtilConnection(connection, false);
@@ -170,11 +202,12 @@ public class UserSessionStoreTest extends DataStoreBaseTest {
 
     @Test(dataProvider = "getValidUsers", dependsOnMethods = {"testStoreUserData"})
     public void testGetUserIdsOfUserStore(String expectedUserId, String username, int tenantId, String userDomain, int
-            IdpId) throws Exception {
+            idpId) throws Exception {
 
         try (Connection connection = getConnection(DB_NAME)) {
-            mockIdentityDataBaseUtilConnection(connection,false);
-            List<String> userIdsOfUserStore = UserSessionStore.getInstance().getUserIdsOfUserStore(userDomain, tenantId);
+            mockIdentityDataBaseUtilConnection(connection, false);
+            List<String> userIdsOfUserStore
+                    = UserSessionStore.getInstance().getUserIdsOfUserStore(userDomain, tenantId);
             Assert.assertTrue(userIdsOfUserStore.contains(expectedUserId), "Expected userId not found in the user " +
                     "list retrieved for userstore domain: " + userDomain + " of tenant: " + tenantId);
         }
@@ -222,8 +255,8 @@ public class UserSessionStoreTest extends DataStoreBaseTest {
 
         try (Connection connection = getConnection(DB_NAME)) {
             mockIdentityDataBaseUtilConnection(connection, false);
-            Assert.assertFalse(UserSessionStore.getInstance().isExistingMapping(userId, sessionId), "Expected session:" +
-                    " " + sessionId + " to be unavailable for user id: " + userId);
+            Assert.assertFalse(UserSessionStore.getInstance().isExistingMapping(userId, sessionId),
+                    "Expected session: " + sessionId + " to be unavailable for user id: " + userId);
         }
     }
 
@@ -238,6 +271,21 @@ public class UserSessionStoreTest extends DataStoreBaseTest {
         }
     }
 
+    @Test(dataProvider = "getSessionAppsData", dependsOnMethods = {"testStoreUserSessionData"})
+    public void testStoreAppSessionData(String sessionId, String subject, int appID, String inboundAuth)
+            throws Exception {
+
+        mockJdbcUtilsTemplate(getDatasource(DB_NAME));
+        UserSessionStore.getInstance().storeAppSessionData(sessionId, subject, appID, inboundAuth);
+    }
+
+    @Test(dataProvider = "getSessionMetadata", dependsOnMethods = {"testStoreUserSessionData"})
+    public void testStoreSessionMetaData(String sessionId, Map<String, String> metaData) throws Exception {
+
+        mockJdbcUtilsTemplate(getDatasource(DB_NAME));
+        UserSessionStore.getInstance().storeSessionMetaData(sessionId, metaData);
+    }
+
     private void mockIdentityDataBaseUtilConnection(Connection connection, Boolean shouldApplyTransaction) throws
             SQLException {
 
@@ -249,6 +297,15 @@ public class UserSessionStoreTest extends DataStoreBaseTest {
         } else {
             when(IdentityDatabaseUtil.getDBConnection(shouldApplyTransaction)).thenReturn(connection1);
         }
+        when(IdentityDatabaseUtil.getSessionDBConnection(shouldApplyTransaction)).thenReturn(connection1);
     }
 
+    private void mockJdbcUtilsTemplate(DataSource dataSource) throws DataAccessException {
+
+        DataSource dataSource1 = spy(dataSource);
+        mockStatic(org.wso2.carbon.identity.core.util.JdbcUtils.class);
+        when(org.wso2.carbon.identity.core.util.JdbcUtils.isH2DB(JdbcUtils.Database.SESSION)).thenReturn(true);
+        when(JdbcUtils.getNewTemplate(JdbcUtils.Database.SESSION)).thenReturn(new JdbcTemplate(dataSource1));
+        when(JdbcUtils.getNewTemplate(JdbcUtils.Database.SESSION)).thenReturn(new JdbcTemplate(dataSource1));
+    }
 }

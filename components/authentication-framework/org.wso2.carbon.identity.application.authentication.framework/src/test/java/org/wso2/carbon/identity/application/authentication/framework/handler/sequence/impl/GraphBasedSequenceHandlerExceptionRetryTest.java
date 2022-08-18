@@ -25,7 +25,7 @@ import org.wso2.carbon.identity.application.authentication.framework.JsFunctionR
 import org.wso2.carbon.identity.application.authentication.framework.MockAuthenticator;
 import org.wso2.carbon.identity.application.authentication.framework.config.model.SequenceConfig;
 import org.wso2.carbon.identity.application.authentication.framework.config.model.graph.JsFunctionRegistryImpl;
-import org.wso2.carbon.identity.application.authentication.framework.config.model.graph.js.JsAuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.config.model.graph.js.nashorn.JsNashornAuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.context.AuthenticationContext;
 import org.wso2.carbon.identity.application.authentication.framework.dao.impl.CacheBackedLongWaitStatusDAO;
 import org.wso2.carbon.identity.application.authentication.framework.dao.impl.LongWaitStatusDAOImpl;
@@ -36,25 +36,31 @@ import org.wso2.carbon.identity.application.authentication.framework.store.LongW
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
+import org.wso2.carbon.identity.common.testng.WithRealmService;
+import org.wso2.carbon.identity.common.testng.WithRegistry;
+import org.wso2.carbon.identity.core.internal.IdentityCoreServiceDataHolder;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.function.BiFunction;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import static org.mockito.Mockito.mock;
 
 @Test
-@WithH2Database(jndiName = "jdbc/WSO2CarbonDB", files = {"dbScripts/h2.sql"})
+@WithH2Database(jndiName = "jdbc/WSO2IdentityDB", files = {"dbScripts/h2.sql"})
 @WithCarbonHome
+@WithRealmService(injectToSingletons =
+        {IdentityCoreServiceDataHolder.class, FrameworkServiceDataHolder.class})
+@WithRegistry(injectToSingletons = {FrameworkServiceDataHolder.class})
 public class GraphBasedSequenceHandlerExceptionRetryTest extends GraphBasedSequenceHandlerAbstractTest {
 
     private static final String CONTEXT_ATTRIBUTE_NAME_CURRENT_FAIL_TRIES = "RetriesOnTest";
 
-    public void testExceptionRetry() throws
-            Exception {
+    public void testExceptionRetry() throws Exception {
 
         JsFunctionRegistryImpl jsFunctionRegistrar = new JsFunctionRegistryImpl();
         FrameworkServiceDataHolder.getInstance().setJsFunctionRegistry(jsFunctionRegistrar);
@@ -67,11 +73,12 @@ public class GraphBasedSequenceHandlerExceptionRetryTest extends GraphBasedSeque
         FrameworkServiceDataHolder.getInstance().setLongWaitStatusStoreService(new LongWaitStatusStoreService
                 (cacheBackedDao, 5000));
         jsFunctionRegistrar.register(JsFunctionRegistry.Subsystem.SEQUENCE_HANDLER, "hasAnyOfTheRoles",
-                (BiFunction<JsAuthenticatedUser, List<String>, Boolean>) this::hasAnyOfTheRolesFunction);
+                (BiFunction<JsNashornAuthenticatedUser, List<String>, Boolean>) this::hasAnyOfTheRolesFunction);
 
         ServiceProvider sp1 = getTestServiceProvider("js-sp-exception-retry.xml");
         AuthenticationContext context = getAuthenticationContext(sp1);
         context.setSessionIdentifier("1234");
+        FrameworkServiceDataHolder.getInstance().setAdaptiveAuthenticationAvailable(true);
         SequenceConfig sequenceConfig = configurationLoader
                 .getSequenceConfig(context, Collections.emptyMap(), sp1);
         context.setSequenceConfig(sequenceConfig);
@@ -90,7 +97,7 @@ public class GraphBasedSequenceHandlerExceptionRetryTest extends GraphBasedSeque
         Assert.assertEquals(currentAttempts.intValue(), 2);
     }
 
-    public boolean hasAnyOfTheRolesFunction(JsAuthenticatedUser jsAuthenticatedUser, List<String> args) {
+    public boolean hasAnyOfTheRolesFunction(JsNashornAuthenticatedUser jsAuthenticatedUser, List<String> args) {
 
         return args.stream().anyMatch(s -> s.contains("Role1"));
     }

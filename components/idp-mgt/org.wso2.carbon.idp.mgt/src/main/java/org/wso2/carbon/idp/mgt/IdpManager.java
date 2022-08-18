@@ -24,9 +24,11 @@ import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.LocalRole;
 import org.wso2.carbon.identity.application.common.model.ProvisioningConnectorConfig;
 import org.wso2.carbon.identity.application.common.model.RoleMapping;
+import org.wso2.carbon.identity.core.model.ExpressionNode;
 import org.wso2.carbon.idp.mgt.model.ConnectedAppsResult;
 import org.wso2.carbon.idp.mgt.model.IdpSearchResult;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -113,6 +115,26 @@ public interface IdpManager {
     }
 
     /**
+     * Get basic information of identity providers along with additionally requested information.
+     *
+     * @param limit              The limit per page.
+     * @param offset             The offset value.
+     * @param sortOrder          The order of IdP ASC/DESC.
+     * @param sortBy             The column value need to sort.
+     * @param tenantDomain       The tenant domain of the user.
+     * @param requiredAttributes The required attributes which needs to be returned.
+     * @param expressionNodes    The list of filters.
+     * @return The basic information of identity providers along with requested attributes.
+     * @throws IdentityProviderManagementException Server/client related errors when getting list of identity providers.
+     */
+    default IdpSearchResult getIdPs(Integer limit, Integer offset, String sortOrder, String sortBy, String tenantDomain,
+                                    List<String> requiredAttributes, List<ExpressionNode> expressionNodes)
+            throws IdentityProviderManagementException {
+
+        return null;
+    }
+
+    /**
      * Get all basic identity provider information.
      *
      * @param filter       filter value for IdP search.
@@ -180,6 +202,31 @@ public interface IdpManager {
     default IdentityProvider getIdPByResourceId(String resourceId, String tenantDomain,
                                         boolean ignoreFileBasedIdps) throws IdentityProviderManagementException {
         return null;
+    }
+
+    /**
+     * Returns IDP name by with resource ID.
+     *
+     * @param resourceId Resource ID of the IDP.
+     * @return Name of IDP.
+     * @throws IdentityProviderManagementException IdentityProviderManagementException.
+     */
+    default String getIdPNameByResourceId(String resourceId) throws IdentityProviderManagementException {
+
+        return null;
+    }
+
+    /**
+     * Retrieves registered Identity provider names for a given tenant by Identity Provider Ids.
+     *
+     * @param tenantDomain Tenant domain.
+     * @param idpIds List of identity provider Ids.
+     * @return A map of identity provider names keyed by idp id.
+     */
+    default Map<String, String> getIdPNamesById(String tenantDomain, Set<String> idpIds)
+            throws IdentityProviderManagementException {
+
+        return Collections.emptyMap();
     }
 
     /**

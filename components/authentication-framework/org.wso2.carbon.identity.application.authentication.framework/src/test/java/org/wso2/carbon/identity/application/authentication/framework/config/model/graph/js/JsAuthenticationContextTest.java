@@ -23,6 +23,8 @@ import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.config.model.SequenceConfig;
 import org.wso2.carbon.identity.application.authentication.framework.config.model.StepConfig;
 import org.wso2.carbon.identity.application.authentication.framework.config.model.graph.AuthenticationGraph;
+import org.wso2.carbon.identity.application.authentication.framework.config.model.graph.js.nashorn.JsNashornAuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.config.model.graph.js.nashorn.JsNashornAuthenticationContext;
 import org.wso2.carbon.identity.application.authentication.framework.context.AuthenticationContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedIdPData;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -31,6 +33,7 @@ import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 
 import java.util.HashMap;
 import java.util.Map;
+
 import javax.script.Bindings;
 import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
@@ -46,6 +49,11 @@ import static org.testng.Assert.assertTrue;
 public class JsAuthenticationContextTest {
 
     public static final String TEST_IDP = "testIdP";
+    private static final String LAST_ATTEMPTED_USER_USERNAME = "lastAttemptedUsername";
+    private static final String LAST_ATTEMPTED_USER_TENANT_DOMAIN = "lastAttemptedTenantDomain";
+    private static final String LAST_ATTEMPTED_USER_USERSTORE_DOMAIN = "lastAttemptedUserstoreDomain";
+    private static final String SERVICE_PROVIDER_NAME = "service_provider_js_test";
+
     private ScriptEngine scriptEngine;
 
     @BeforeClass
@@ -68,9 +76,10 @@ public class JsAuthenticationContextTest {
         AuthenticationContext authenticationContext = new AuthenticationContext();
         setupAuthContextWithStepData(authenticationContext, authenticatedUser);
 
-        JsAuthenticationContext jsAuthenticationContext = new JsAuthenticationContext(authenticationContext);
+        JsNashornAuthenticationContext jsNashornAuthenticationContext =
+                new JsNashornAuthenticationContext(authenticationContext);
         Bindings bindings = scriptEngine.getBindings(ScriptContext.GLOBAL_SCOPE);
-        bindings.put("context", jsAuthenticationContext);
+        bindings.put("context", jsNashornAuthenticationContext);
 
         Object result = scriptEngine.eval("context.steps[1].subject.remoteClaims['Test.Remote.Claim.Url.1']");
         assertNull(result);
@@ -111,9 +120,10 @@ public class JsAuthenticationContextTest {
         AuthenticationContext authenticationContext = new AuthenticationContext();
         setupAuthContextWithStepData(authenticationContext, authenticatedUser);
 
-        JsAuthenticationContext jsAuthenticationContext = new JsAuthenticationContext(authenticationContext);
+        JsNashornAuthenticationContext jsNashornAuthenticationContext =
+                new JsNashornAuthenticationContext(authenticationContext);
         Bindings bindings = scriptEngine.getBindings(ScriptContext.GLOBAL_SCOPE);
-        bindings.put("context", jsAuthenticationContext);
+        bindings.put("context", jsNashornAuthenticationContext);
 
         scriptEngine.eval("context.steps[1].subject.remoteClaims['testClaim']='testValue'");
 
@@ -125,14 +135,13 @@ public class JsAuthenticationContextTest {
     @Test
     public void testGetServiceProviderFromWrappedContext() throws Exception {
 
-        final String SERVICE_PROVIDER_NAME = "service_provider_js_test";
-
         AuthenticationContext authenticationContext = new AuthenticationContext();
         authenticationContext.setServiceProviderName(SERVICE_PROVIDER_NAME);
 
-        JsAuthenticationContext jsAuthenticationContext = new JsAuthenticationContext(authenticationContext);
+        JsNashornAuthenticationContext jsNashornAuthenticationContext =
+                new JsNashornAuthenticationContext(authenticationContext);
         Bindings bindings = scriptEngine.getBindings(ScriptContext.GLOBAL_SCOPE);
-        bindings.put("context", jsAuthenticationContext);
+        bindings.put("context", jsNashornAuthenticationContext);
 
         Object result = scriptEngine.eval("context.serviceProviderName");
         assertNotNull(result);
@@ -144,10 +153,6 @@ public class JsAuthenticationContextTest {
     @Test
     public void testGetLastLoginFailedUserFromWrappedContext() throws Exception {
 
-        final String LAST_ATTEMPTED_USER_USERNAME = "lastAttemptedUsername";
-        final String LAST_ATTEMPTED_USER_TENANT_DOMAIN = "lastAttemptedTenantDomain";
-        final String LAST_ATTEMPTED_USER_USERSTORE_DOMAIN = "lastAttemptedUserstoreDomain";
-
         AuthenticatedUser lastAttemptedUser = new AuthenticatedUser();
         lastAttemptedUser.setUserName(LAST_ATTEMPTED_USER_USERNAME);
         lastAttemptedUser.setTenantDomain(LAST_ATTEMPTED_USER_TENANT_DOMAIN);
@@ -156,13 +161,14 @@ public class JsAuthenticationContextTest {
         AuthenticationContext authenticationContext = new AuthenticationContext();
         authenticationContext.setProperty(FrameworkConstants.JSAttributes.JS_LAST_LOGIN_FAILED_USER, lastAttemptedUser);
 
-        JsAuthenticationContext jsAuthenticationContext = new JsAuthenticationContext(authenticationContext);
+        JsNashornAuthenticationContext jsNashornAuthenticationContext =
+                new JsNashornAuthenticationContext(authenticationContext);
         Bindings bindings = scriptEngine.getBindings(ScriptContext.GLOBAL_SCOPE);
-        bindings.put("context", jsAuthenticationContext);
+        bindings.put("context", jsNashornAuthenticationContext);
 
         Object result = scriptEngine.eval("context.lastLoginFailedUser");
         assertNotNull(result);
-        assertTrue(result instanceof JsAuthenticatedUser);
+        assertTrue(result instanceof JsNashornAuthenticatedUser);
 
         String username = (String) scriptEngine.eval("context.lastLoginFailedUser.username");
         assertEquals(username, LAST_ATTEMPTED_USER_USERNAME);
@@ -180,9 +186,10 @@ public class JsAuthenticationContextTest {
         AuthenticationContext authenticationContext = new AuthenticationContext();
         authenticationContext.setProperty(FrameworkConstants.JSAttributes.JS_LAST_LOGIN_FAILED_USER, null);
 
-        JsAuthenticationContext jsAuthenticationContext = new JsAuthenticationContext(authenticationContext);
+        JsNashornAuthenticationContext jsNashornAuthenticationContext =
+                new JsNashornAuthenticationContext(authenticationContext);
         Bindings bindings = scriptEngine.getBindings(ScriptContext.GLOBAL_SCOPE);
-        bindings.put("context", jsAuthenticationContext);
+        bindings.put("context", jsNashornAuthenticationContext);
 
         Object result = scriptEngine.eval("context.lastLoginFailedUser");
         assertNull(result);

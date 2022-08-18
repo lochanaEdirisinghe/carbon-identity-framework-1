@@ -19,9 +19,12 @@
 package org.wso2.carbon.identity.user.profile.mgt.association.federation;
 
 import org.wso2.carbon.identity.application.common.model.User;
+import org.wso2.carbon.identity.user.profile.mgt.AssociatedAccountDTO;
 import org.wso2.carbon.identity.user.profile.mgt.UserProfileException;
 import org.wso2.carbon.identity.user.profile.mgt.association.federation.exception.FederatedAssociationManagerException;
 import org.wso2.carbon.identity.user.profile.mgt.association.federation.model.FederatedAssociation;
+
+import java.util.List;
 
 /**
  * The service which exposes federated account association management APIs.
@@ -38,6 +41,34 @@ public interface FederatedAssociationManager {
      */
     void createFederatedAssociation(User user, String idpName, String federatedUserId)
             throws FederatedAssociationManagerException;
+
+    /**
+     * Associate the given user with the given IdP and the federated user id.
+     *
+     * @param user            Local user.
+     * @param idpId           Identity provider uuid.
+     * @param federatedUserId Federated user id.
+     * @throws FederatedAssociationManagerException while creating the federated association.
+     */
+    default void createFederatedAssociationWithIdpResourceId(User user, String idpId, String federatedUserId)
+            throws FederatedAssociationManagerException {
+
+    }
+
+    /**
+     * Get associated local user for the given federated user.
+     *
+     * @param tenantDomain      Tenant domain.
+     * @param idpId             UUID of the IDP.
+     * @param federatedUserId   UUID of the federated user.
+     * @return  Associated local user name.
+     * @throws FederatedAssociationManagerException
+     */
+    default User getAssociatedLocalUser(String tenantDomain, String idpId, String federatedUserId)
+            throws FederatedAssociationManagerException {
+
+        return null;
+    }
 
     /**
      * Return the username of the local user associated with the given federated identifier.
@@ -59,6 +90,21 @@ public interface FederatedAssociationManager {
      * @throws FederatedAssociationManagerException
      */
     FederatedAssociation[] getFederatedAssociationsOfUser(User user) throws FederatedAssociationManagerException;
+
+    /**
+     * Returns a list of federated associations associated with the given user.
+     *
+     * @param tenantId Id of the tenant.
+     * @param domainFreeUsername username without domain.
+     * @return An array of federated associations which contains the federated identifier info.
+     * @throws FederatedAssociationManagerException
+     */
+    default List<AssociatedAccountDTO> getFederatedAssociationsOfUser(
+            int tenantId, String userStoreDomain, String domainFreeUsername) throws
+            FederatedAssociationManagerException {
+
+        return null;
+    }
 
     /**
      * Remove the federated association with the given federated association for the given user.

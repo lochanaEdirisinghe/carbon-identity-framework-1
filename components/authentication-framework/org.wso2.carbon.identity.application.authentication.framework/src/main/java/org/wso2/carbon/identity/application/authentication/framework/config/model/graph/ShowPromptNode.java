@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2018, WSO2 LLC. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -29,13 +29,13 @@ import java.util.Map;
  */
 public class ShowPromptNode extends DynamicDecisionNode implements AuthGraphNode {
 
-    public static final String preHandler = "preHandler";
+    public static final String PRE_HANDLER = "preHandler";
 
     private static final long serialVersionUID = -5644595996095910601L;
     private String templateId;
     private Map<String, Serializable> data;
     private Map<String, Object> parameters;
-    private Map<String, SerializableJsFunction> handlerMap = new HashMap<>();
+    private Map<String, BaseSerializableJsFunction> handlerMap = new HashMap<>();
 
     public String getTemplateId() {
 
@@ -67,17 +67,17 @@ public class ShowPromptNode extends DynamicDecisionNode implements AuthGraphNode
         this.parameters = parameters;
     }
 
-    public Map<String, SerializableJsFunction> getHandlerMap() {
+    public Map<String, BaseSerializableJsFunction> getHandlerMap() {
 
         return Collections.unmodifiableMap(handlerMap);
     }
 
-    public void setHandlerMap(Map<String, SerializableJsFunction> handlerMap) {
+    public void setHandlerMap(Map<String, BaseSerializableJsFunction> handlerMap) {
 
         this.handlerMap = handlerMap;
     }
 
-    public void addHandler(String outcome, SerializableJsFunction function) {
+    public void addHandler(String outcome, BaseSerializableJsFunction function) {
         handlerMap.put(outcome, function);
     }
 

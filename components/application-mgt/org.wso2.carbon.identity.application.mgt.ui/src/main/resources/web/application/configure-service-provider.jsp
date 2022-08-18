@@ -86,12 +86,9 @@
 <script src="codemirror/addon/dialog/dialog.js"></script>
 <script src="codemirror/addon/display/panel.js"></script>
 <script src="codemirror/util/formatting.js"></script>
-<script src="js/handlebars.min-v4.0.11.js"></script>
+<script src="js/handlebars.min-v4.7.7.js"></script>
 <script src="../admin/js/main.js" type="text/javascript"></script>
 <script type="text/javascript" src="../identity/encode/js/identity-encode.js"></script>
-
-<script type="text/javascript" src="extensions/js/vui.js"></script>
-<script type="text/javascript" src="../extensions/core/js/vui.js"></script>
 <script type="text/javascript" src="../admin/js/main.js"></script>
 <script type="text/javascript" src="../identity/validation/js/identity-validate.js"></script>
 <jsp:include page="../dialog/display_messages.jsp" />
@@ -147,7 +144,7 @@
     //adding code to support jwks URI
     String jwksUri = appBean.getServiceProvider().getJwksUri();
     boolean hasJWKSUri = StringUtils.isNotEmpty(jwksUri);
-    
+
     String authTypeReq = request.getParameter("authType");
     if (authTypeReq != null && authTypeReq.trim().length() > 0) {
         appBean.setAuthenticationType(authTypeReq);
@@ -236,19 +233,23 @@
 
     oauthapp = appBean.getOIDCClientId();
 
-    String wsTrust = request.getParameter("serviceName");
+    String wsTrustEndpoint = request.getParameter("serviceName");
+    String wsTrustObsoleteEndpoint = request.getParameter("obsoleteServiceName");
 
-    if (wsTrust != null && "update".equals(action)) {
-        appBean.setWstrustEp(wsTrust);
+    if (wsTrustEndpoint != null && !wsTrustEndpoint.isEmpty() && "update".equals(action)) {
+        if (wsTrustObsoleteEndpoint != null && !wsTrustObsoleteEndpoint.isEmpty()) {
+            appBean.removeWstrustEp(wsTrustObsoleteEndpoint);
+        }
+        appBean.addWstrustEp(wsTrustEndpoint);
         isNeedToUpdate = true;
     }
 
-    if (wsTrust != null && "delete".equals(action)) {
-        appBean.deleteWstrustEp();
+    if (wsTrustEndpoint != null && !wsTrustEndpoint.isEmpty() && "delete".equals(action)) {
+        appBean.removeWstrustEp(wsTrustEndpoint);
         isNeedToUpdate = true;
     }
 
-    wsTrust = appBean.getWstrustSP();
+    List<String> wsTrust = appBean.getAllWsTrustSPs();
 
     String display = request.getParameter("display");
 
@@ -514,6 +515,8 @@
         document.getElementById('templateDesc').value = templateDesc;
 
         validateSPConfigurations();
+        encodeSPCertificate();
+
         $.ajax({
             type: "POST",
             url: 'add-service-provider-as-template.jsp',
@@ -533,6 +536,7 @@
             },
             async: false
         });
+        decodeSPCertificate();
     }
 
     function createAppOnclick() {
@@ -554,15 +558,27 @@
                 }
                 CARBON.showConfirmationDialog(confirmationMessage,
                     function () {
+                        encodeSPCertificate();
                         document.getElementById("configure-sp-form").submit();
                     },
                     function () {
                         return false;
                     });
             } else {
+                encodeSPCertificate();
                 document.getElementById("configure-sp-form").submit();
             }
         }
+    }
+
+    function encodeSPCertificate() {
+        var spCertificate = document.getElementById('sp-certificate').value;
+        document.getElementById('sp-certificate').value = btoa(spCertificate);
+    }
+
+    function decodeSPCertificate() {
+        var spCertificate = document.getElementById('sp-certificate').value;
+        document.getElementById('sp-certificate').value = atob(spCertificate);
     }
 
     function updateBeanAndRedirect(redirectURL) {
@@ -574,6 +590,7 @@
 
         var numberOfRoleMappings = document.getElementById("roleMappingAddTable").rows.length;
         document.getElementById('number_of_rolemappings').value = numberOfRoleMappings;
+        encodeSPCertificate();
 
         $.ajax({
             type: "POST",
@@ -583,6 +600,7 @@
                 location.href = redirectURL;
             }
         });
+        decodeSPCertificate();
     }
 
     function getConfigurationType(postURL) {
@@ -625,6 +643,7 @@
 
         var numberOfRoleMappings = document.getElementById("roleMappingAddTable").rows.length;
         document.getElementById('number_of_rolemappings').value = numberOfRoleMappings;
+        encodeSPCertificate();
 
         $.ajax({
             type: "POST",
@@ -647,6 +666,7 @@
                 });
             }
         });
+        decodeSPCertificate();
     }
 
     function updateBeanAndPostToWithConfirmation(postURL, data) {
@@ -664,6 +684,9 @@
     }
 
     function updateBeanAndPostTo(postURL, data) {
+
+        encodeSPCertificate();
+
         $.ajax({
             type: "POST",
             url: 'update-application-bean.jsp?spName=<%=Encode.forUriComponent(spName)%>',
@@ -681,6 +704,7 @@
                 });
             }
         });
+        decodeSPCertificate();
     }
 
     function onSamlSsoClick() {
@@ -1102,7 +1126,7 @@
                     });
             }
         });
-        
+
 
         if ($('#isNeedToUpdate').val() == 'true') {
             $('#isNeedToUpdate').val('false');
@@ -1114,12 +1138,14 @@
 
             var numberOfRoleMappings = document.getElementById("roleMappingAddTable").rows.length;
             document.getElementById('number_of_rolemappings').value = numberOfRoleMappings;
+            encodeSPCertificate();
 
             $.ajax({
                 type: "POST",
                 url: 'configure-service-provider-update-ajaxprocessor.jsp?spName=<%=Encode.forUriComponent(spName)%>',
                 data: $("#configure-sp-form").serialize()
             });
+            decodeSPCertificate();
         }
 
         jQuery('#publicCertDeleteLink').click(function () {
@@ -1144,8 +1170,8 @@
         }).remove();
         $.each($('.spClaimVal'), function () {
             if ($(this).val().length > 0) {
-                $("#roleClaim").append('<option value="' + $(this).val() + '">' + $(this).val() + '</option>');
-                $('#subject_claim_uri').append('<option value="' + $(this).val() + '">' + $(this).val() + '</option>');
+                $("#roleClaim").append('<option value="' + encodeForHTML($(this).val()) + '">' + encodeForHTML($(this).val()) + '</option>');
+                $('#subject_claim_uri').append('<option value="' + encodeForHTML($(this).val()) + '">' + encodeForHTML($(this).val()) + '</option>');
             }
         });
     }
@@ -1370,7 +1396,7 @@
                             <td>
                                 <input style="width:50%" id="spName" name="spName" type="text"
                                        value="<%=Encode.forHtmlAttribute(spName)%>"
-                                       white-list-patterns="^[a-zA-Z0-9\s.+_-]*$" autofocus/>
+                                       white-list-patterns="<%=Encode.forHtmlContent(ApplicationMgtUIUtil.getSPValidatorJavascriptRegex())%>" autofocus/>
                                 <div class="sectionHelp">
                                     <fmt:message key='help.name'/>
                                 </div>
@@ -1545,6 +1571,43 @@
                                        autofocus />
                                 <div class="sectionHelp">
                                     <fmt:message key='help.image.url'/>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="width:15%" class="leftCol-med labelField">
+                                <fmt:message key='config.application.logout.return.url'/>
+                            </td>
+                            <td>
+                                <% boolean logoutReturnUrlDefined = false;
+                                    if (appBean.getServiceProvider().getSpProperties() != null) {
+                                        for (ServiceProviderProperty property : appBean.getServiceProvider().getSpProperties()) {
+                                            if (property.getName() != null && "logoutReturnUrl".equals(property.getName())) {
+                                                logoutReturnUrlDefined = true; %>
+                                <input style="width:50%" type="text" name="logoutReturnUrl" id="logoutReturnUrl"
+                                       value="<%=property.getValue() != null ? Encode.forHtmlContent(property.getValue()) : "" %>"/>
+                                <% }
+                                }
+                                }
+                                    if (!logoutReturnUrlDefined) { %>
+                                <input style="width:50%" type="text" name="logoutReturnUrl" id="logoutReturnUrl" value=".*"/>
+                                <% } %>
+                                <div class="sectionHelp">
+                                    <fmt:message key='help.logout.return.url'/>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="leftCol-med">
+                                <label for="isManagementApp"><fmt:message key="config.application.isManagementApp"/></label>
+                            </td>
+                            <td>
+                                <div class="sectionCheckbox">
+                                    <input type="checkbox" id="isManagementApp"
+                                           name="isManagementApp" <%=appBean.getServiceProvider().getManagementApp() ? "checked" : "" %> disabled/>
+                                    <span style="display:inline-block" class="sectionHelp">
+                                    <fmt:message key='help.management.app'/>
+                                </span>
                                 </div>
                             </td>
                         </tr>
@@ -2252,9 +2315,9 @@
                                                                        value="<%=Encode.forHtmlAttribute(oauthConsumerSecret)%>"
                                                                        readonly="readonly">
                                                                 <span style="float: right;">
-                                						<a style="margin-top: 5px;" class="showHideBtn"
+                                                        <a style="margin-top: 5px;" class="showHideBtn"
                                                            onclick="showHidePassword(this, 'oauthConsumerSecret')">Show</a>
-                                					</span>
+                                                    </span>
                                                             </div>
                                                             <% } %>
                                                             <%} %>
@@ -2299,46 +2362,12 @@
                                     </table>
                                 </div>
 
-
-                                <h2 id="openid.config.head" class="sectionSeperator trigger active"
-                                    style="background-color: beige;">
-                                    <a href="#">OpenID Configuration</a>
-                                    <div class="enablelogo"><img src="images/ok.png" width="16" height="16"></div>
-                                </h2>
-                                <div class="toggle_container sectionSub" style="margin-bottom:10px;display:none;"
-                                     id="openid.config.div">
-                                    <table class="carbonFormTable">
-
-                                        <tr>
-                                            <td style="width:15%" class="leftCol-med labelField">
-                                                <fmt:message key='application.openid.realm'/>:
-                                            </td>
-                                            <td>
-                                                <%
-                                                    if (appBean.getOpenIDRealm() != null) {
-                                                %>
-                                                <input style="width:50%" id="openidRealm" name="openidRealm" type="text"
-                                                       value="<%=Encode.forHtmlAttribute(appBean.getOpenIDRealm())%>"
-                                                       autofocus/>
-                                                <% } else { %>
-                                                <input style="width:50%" id="openidRealm" name="openidRealm" type="text"
-                                                       value="" autofocus/>
-                                                <% } %>
-                                                <div class="sectionHelp">
-                                                    <fmt:message key='help.openid'/>
-                                                </div>
-                                            </td>
-
-                                        </tr>
-
-                                    </table>
-                                </div>
-
-
                                 <h2 id="passive.sts.config.head" class="sectionSeperator trigger active"
                                     style="background-color: beige;">
                                     <a href="#">WS-Federation (Passive) Configuration</a>
+                                    <% if (appBean.getPassiveSTSRealm() != null) { %>
                                     <div class="enablelogo"><img src="images/ok.png" width="16" height="16"></div>
+                                    <%} %>
                                 </h2>
                                 <div class="toggle_container sectionSub" style="margin-bottom:10px;display:none;"
                                      id="passive.config.div">
@@ -2355,10 +2384,10 @@
                                                 <input style="width:50%" id="passiveSTSRealm" name="passiveSTSRealm"
                                                        type="text"
                                                        value="<%=Encode.forHtmlAttribute(appBean.getPassiveSTSRealm())%>"
-                                                       autofocus/>
+                                                       autocomplete="off" autofocus/>
                                                 <% } else { %>
                                                 <input style="width:50%" id="passiveSTSRealm" name="passiveSTSRealm"
-                                                       type="text" value="" autofocus/>
+                                                       type="text" value="" autocomplete="off" autofocus/>
                                                 <% } %>
                                                 <div class="sectionHelp">
                                                     <fmt:message key='help.passive.sts'/>
@@ -2377,10 +2406,10 @@
                                                 <input style="width:50%" id="passiveSTSWReply" name="passiveSTSWReply"
                                                        type="text"
                                                        value="<%=Encode.forHtmlAttribute(appBean.getPassiveSTSWReply())%>"
-                                                       autofocus/>
+                                                       autocomplete="off" autofocus/>
                                                 <% } else { %>
                                                 <input style="width:50%" id="passiveSTSWReply" name="passiveSTSWReply"
-                                                       type="text" value="" autofocus/>
+                                                       type="text" value="" autocomplete="off" autofocus/>
                                                 <% } %>
                                                 <div class="sectionHelp">
                                                     <fmt:message key='help.passive.sts.wreply'/>
@@ -2396,7 +2425,7 @@
                                 <h2 id="wst.config.head" class="sectionSeperator trigger active"
                                     style="background-color: beige;">
                                     <a href="#"><fmt:message key="title.config.sts.config"/></a>
-                                    <% if (appBean.getWstrustSP() != null) { %>
+                                    <% if (appBean.getAllWsTrustSPs() != null && !appBean.getAllWsTrustSPs().isEmpty()) { %>
                                     <div class="enablelogo"><img src="images/ok.png" width="16" height="16"></div>
                                     <%} %>
                                 </h2>
@@ -2412,7 +2441,7 @@
                                             <tr>
                                                 <td>
                                                     <%
-                                                        if (appBean.getWstrustSP() == null) {
+                                                        if (appBean.getAllWsTrustSPs() == null || appBean.getAllWsTrustSPs().isEmpty()) {
                                                     %>
                                                     <a id="sts_link" class="icon-link" onclick="onSTSClick()">
                                                         <fmt:message key='auth.configure'/></a>
@@ -2429,25 +2458,32 @@
                                                         </tr>
                                                         </thead>
                                                         <tbody>
+                                                        <%
+                                                            for (String wsTrustURI : appBean.getAllWsTrustSPs()) {
+                                                        %>
                                                         <tr>
-                                                            <td><%=Encode.forHtmlContent(appBean.getWstrustSP())%>
+                                                            <td>
+                                                                <%=Encode.forHtmlContent(wsTrustURI)%>
                                                             </td>
                                                             <td style="white-space: nowrap;">
                                                                 <a title="Edit Audience"
-                                                                   onclick="updateBeanAndRedirect('../generic-sts/sts.jsp?spName=<%=Encode.forUriComponent(spName)%>&&spAudience=<%=Encode.forUriComponent(appBean.getWstrustSP())%>&spAction=spEdit');"
+                                                                   onclick="updateBeanAndRedirect('../generic-sts/sts.jsp?spName=<%=Encode.forUriComponent(spName)%>&spAudience=<%=Encode.forUriComponent(wsTrustURI)%>&spAction=spEdit');"
                                                                    class="icon-link"
                                                                    style="background-image: url(../admin/images/edit.gif)">Edit</a>
                                                                 <a title="Delete Audience"
                                                                    onclick="updateBeanAndPostWithConfirmation('../generic-sts/remove-sts-trusted-service-ajaxprocessor.jsp',
-                                                                       'action=delete&spName=<%=Encode.forUriComponent(spName)%>&endpointaddrs=<%=Encode.forUriComponent(appBean.getWstrustSP())%>',
-                                                                       'configure-service-provider.jsp?spName=<%=Encode.forUriComponent(spName)%>&action=delete&serviceName=<%=Encode.forUriComponent(appBean.getWstrustSP())%>');"
+                                                                       'action=delete&spName=<%=Encode.forUriComponent(spName)%>&endpointaddrs=<%=Encode.forUriComponent(wsTrustURI)%>',
+                                                                       'configure-service-provider.jsp?spName=<%=Encode.forUriComponent(spName)%>&action=delete&serviceName=<%=Encode.forUriComponent(wsTrustURI)%>');"
                                                                    class="icon-link"
                                                                    style="background-image: url(images/delete.gif)">
                                                                     Delete </a>
                                                             </td>
                                                         </tr>
+                                                        <% } %>
                                                         </tbody>
                                                     </table>
+                                                    <a id="sts_link" class="icon-link" style="background-image:url(images/add.gif);" onclick="onSTSClick()">
+                                                        <fmt:message key='auth.add.audience'/></a>
                                                     <%
                                                         }
                                                     %>
@@ -2613,11 +2649,11 @@
                                                                    value="<%=prop.getDefaultValue()%>"
                                                                 <%}%>
                                                                    style="  outline: none; border: none; min-width: 175px; max-width:
-						                            180px;"/>
+                                                    180px;"/>
                                                             <span style=" float: right; padding-right: 5px;">
-					                            <a style="margin-top: 5px;" class="showHideBtn"
+                                                <a style="margin-top: 5px;" class="showHideBtn"
                                                    onclick="showHidePassword(this, '<%=propName%>')">Show</a>
-				                            </span>
+                                            </span>
                                                         </div>
                                                         <% } else { %>
                                                         <input id="<%=propName%>"
@@ -2636,9 +2672,9 @@
                                                         <%} %>
                                                     </td>
                                                             <%
-					                            }
-		                            }
-	                            %>
+                                                }
+                                    }
+                                %>
                                             </table>
                                         </div>
                                         <%

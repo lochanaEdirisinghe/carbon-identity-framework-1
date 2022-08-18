@@ -146,8 +146,8 @@ public class WorkflowDAO {
     /**
      * Remove all workflows of a given tenant id.
      *
-     * @param tenantId Id of the tenant
-     * @throws InternalWorkflowException
+     * @param tenantId The id of the tenant.
+     * @throws InternalWorkflowException throws when an error occurs in removing workflows.
      */
     public void removeWorkflows(int tenantId) throws InternalWorkflowException {
 
@@ -157,6 +157,8 @@ public class WorkflowDAO {
                 prepStmt.setInt(1, tenantId);
                 prepStmt.executeUpdate();
                 IdentityDatabaseUtil.commitTransaction(connection);
+            } catch (SQLException e) {
+                throw new InternalWorkflowException(errorMessage, e);
             }
         } catch (SQLException e) {
             throw new InternalWorkflowException(errorMessage, e);
@@ -331,8 +333,8 @@ public class WorkflowDAO {
     /**
      * Clear all the parameters of all the workflows of a given tenant.
      *
-     * @param tenantId Id of the tenant
-     * @throws InternalWorkflowException
+     * @param tenantId The id of the tenant.
+     * @throws InternalWorkflowException throws when an error occurs in removing workflows.
      */
     public void removeWorkflowParams(int tenantId) throws InternalWorkflowException {
 
@@ -342,6 +344,8 @@ public class WorkflowDAO {
                 prepStmt.setInt(1, tenantId);
                 prepStmt.executeUpdate();
                 IdentityDatabaseUtil.commitTransaction(connection);
+            } catch (SQLException e) {
+                throw new InternalWorkflowException(errorMessage, e);
             }
         } catch (SQLException e) {
             throw new InternalWorkflowException(errorMessage, e);
